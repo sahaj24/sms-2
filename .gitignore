@@ -1,0 +1,35 @@
+# Root .gitignore for repository
+
+# Python
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Node
+node_modules/
+**/node_modules/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Misc
+.DS_Store
+.env*
+*.pem
+.vscode/
+.idea/
+
+# Binary / large
+*.xlsx
+*.xls
+*.csv
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
