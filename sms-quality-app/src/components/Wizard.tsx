@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -7,10 +8,8 @@ import {
   CheckCircle2,
   ChevronRight,
   FlaskConical,
-  Gauge,
   Languages,
   RotateCcw,
-  ShieldCheck,
 } from "lucide-react";
 
 type Lang = "en" | "hi" | "ta";
@@ -40,7 +39,6 @@ const translations = {
   en: {
     companyLine: "Suryadev",
     processTitle: "SMS Process Quality",
-    safetyBand: "Safety Temperature: 1500° - 1800°C",
     stepLabel: "Step",
     reset: "Reset",
     instructionTitle: "What To Do",
@@ -125,7 +123,6 @@ const translations = {
   hi: {
     companyLine: "सूर्यदेव",
     processTitle: "SMS प्रक्रिया गुणवत्ता",
-    safetyBand: "सुरक्षा तापमान: 1500° - 1800°C",
     stepLabel: "स्टेप",
     reset: "रीसेट",
     instructionTitle: "क्या करना है",
@@ -210,7 +207,6 @@ const translations = {
   ta: {
     companyLine: "சூர்யதேவ்",
     processTitle: "SMS செயல்முறை தரம்",
-    safetyBand: "பாதுகாப்பு வெப்பநிலை: 1500° - 1800°C",
     stepLabel: "படி",
     reset: "ரீசெட்",
     instructionTitle: "செய்ய வேண்டியது",
@@ -564,7 +560,7 @@ export default function Wizard() {
   };
 
   return (
-    <div className="min-h-dvh w-full bg-[radial-gradient(circle_at_20%_10%,#ffe3b4_0%,#f5ecdf_46%,#e6e0d6_100%)] text-slate-900">
+    <div className="min-h-dvh w-full bg-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 border-b border-slate-300 bg-slate-900/95 px-4 py-3 text-white backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div>
@@ -601,19 +597,36 @@ export default function Wizard() {
                 exit={{ opacity: 0, y: -14 }}
                 className="space-y-5"
               >
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <h2 className="text-2xl font-bold text-slate-900">{t.welcomeTitle}</h2>
-                  <p className="mt-1 text-sm text-slate-700">{t.welcomeText}</p>
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-                    <ShieldCheck className="h-4 w-4" />
-                    {t.safetyBand}
+                <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4 sm:p-6">
+                  <div className="grid items-center gap-4 sm:grid-cols-[140px_1fr]">
+                    <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-3">
+                      <Image
+                        src="https://suryadev.in/wp-content/uploads/2026/01/logo-1.png"
+                        alt="Suryadev logo"
+                        width={320}
+                        height={120}
+                        className="h-12 w-auto sm:h-16"
+                        priority
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                        {t.companyLine}
+                      </p>
+                      <h2 className="mt-1 text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl">
+                        {t.welcomeTitle}
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-base font-medium text-slate-700 sm:text-lg">
+                        {t.welcomeText}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-slate-700">
-                    <Languages className="h-4 w-4" />
-                    <p className="text-sm font-semibold">{t.languageQuestion}</p>
+                <div className="rounded-2xl border border-slate-300 bg-white p-4 sm:p-6">
+                  <div className="mb-4 flex items-center gap-2 text-slate-800">
+                    <Languages className="h-5 w-5" />
+                    <p className="text-lg font-bold leading-snug">{t.languageQuestion}</p>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -626,7 +639,7 @@ export default function Wizard() {
                         key={item.code}
                         type="button"
                         onClick={() => setLanguage(item.code)}
-                        className={`rounded-xl border px-4 py-3 text-base font-semibold transition ${
+                        className={`rounded-xl border-2 px-4 py-4 text-xl font-bold transition ${
                           language === item.code
                             ? "border-orange-500 bg-orange-100 text-orange-900"
                             : "border-slate-300 bg-white text-slate-700"
@@ -642,10 +655,10 @@ export default function Wizard() {
                   <button
                     type="button"
                     onClick={() => setStep("grade")}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-7 py-4 text-base font-bold text-white hover:bg-slate-800 sm:w-auto sm:text-lg"
                   >
                     {t.continueButton}
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
               </motion.div>
@@ -761,12 +774,6 @@ export default function Wizard() {
                     step="0.1"
                     min={0}
                   />
-                  <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3">
-                    <div className="flex items-center gap-2 text-emerald-800">
-                      <Gauge className="h-4 w-4" />
-                      <p className="text-sm font-bold">{t.safetyBand}</p>
-                    </div>
-                  </div>
                   <NumberInput
                     label={t.scrapShare}
                     value={scrapSharePct}
