@@ -23,14 +23,26 @@ type GradeOption = {
   className: string;
 };
 
+type ScrapTypeOption = {
+  value: string;
+  image: string;
+};
+
 const gradeOptions: GradeOption[] = [
-  { code: "500N", type: "N", note: "N", className: "border-slate-300 bg-slate-100" },
+  { code: "500N", type: "N", note: "N (Normal)", className: "border-slate-300 bg-slate-100" },
   { code: "550N", type: "N", note: "Yellow", className: "border-amber-300 bg-amber-100" },
   { code: "500D", type: "D", note: "Purple", className: "border-violet-300 bg-violet-100" },
   { code: "550D", type: "D", note: "Orange", className: "border-orange-300 bg-orange-100" },
   { code: "500D CRS", type: "D", note: "Pink", className: "border-pink-300 bg-pink-100" },
   { code: "550 Bright", type: "D", note: "Blue", className: "border-sky-300 bg-sky-100" },
   { code: "550D CRS", type: "D", note: "Green", className: "border-emerald-300 bg-emerald-100" },
+];
+
+const scrapTypeOptions: ScrapTypeOption[] = [
+  { value: "HMS", image: "/scrap-types/hms.png" },
+  { value: "CR Punching", image: "/scrap-types/cr-punching.png" },
+  { value: "Kaichi Cutting", image: "/scrap-types/kaichi-cutting.png" },
+  { value: "Import Boring", image: "/scrap-types/import-boring.png" },
 ];
 
 const stepOrder: Step[] = ["welcome", "grade", "inputs", "result", "askCarbon", "carbon"];
@@ -54,10 +66,10 @@ const translations = {
     welcomeText: "Please choose language and press Continue.",
     languageQuestion: "Do you want to continue in English / Hindi / Tamil?",
 
-    gradeTypeTitle: "Select N or D",
+    gradeTypeTitle: "Select N (Normal) or D (Ductile)",
     gradeTypeText: "First choose type, then choose exact grade.",
-    nType: "N Grade",
-    dType: "D Grade",
+    nType: "N (Normal) Grade",
+    dType: "D (Ductile) Grade",
     gradeTitle: "Please select TMT grade",
     gradeText: "Tap one option and go next.",
 
@@ -114,7 +126,7 @@ const translations = {
     dolocharNeed: "Required Dolochar",
 
     instructionWelcome: "Select one language, then press Continue.",
-    instructionGrade: "Select N or D first, then choose one exact grade.",
+    instructionGrade: "Select N (Normal) or D (Ductile) first, then choose one exact grade.",
     instructionInputs: "Enter quantity and split. Scrap + DRI should stay 100%.",
     instructionResult: "Read result carefully. Then move to carbon question.",
     instructionAskCarbon: "Press Yes for carbon chemistry page, No to start a new heat.",
@@ -138,10 +150,10 @@ const translations = {
     welcomeText: "कृपया भाषा चुनें और आगे बढ़ें।",
     languageQuestion: "कृपया बताएं, आप किस भाषा में आगे बढ़ना चाहते हैं?",
 
-    gradeTypeTitle: "N या D चुनें",
+    gradeTypeTitle: "N (Normal) या D (Ductile) चुनें",
     gradeTypeText: "पहले टाइप चुनें, फिर सही ग्रेड चुनें।",
-    nType: "N ग्रेड",
-    dType: "D ग्रेड",
+    nType: "N (Normal) ग्रेड",
+    dType: "D (Ductile) ग्रेड",
     gradeTitle: "कृपया TMT ग्रेड चुनें",
     gradeText: "एक विकल्प चुनकर अगले पेज पर जाएं।",
 
@@ -198,7 +210,7 @@ const translations = {
     dolocharNeed: "आवश्यक डोलोचार",
 
     instructionWelcome: "एक भाषा चुनें और Continue दबाएँ।",
-    instructionGrade: "पहले N या D चुनें, फिर एक ग्रेड चुनें।",
+    instructionGrade: "पहले N (Normal) या D (Ductile) चुनें, फिर एक ग्रेड चुनें।",
     instructionInputs: "मात्रा और प्रतिशत भरें। स्क्रैप + DRI = 100% रखें।",
     instructionResult: "परिणाम पढ़ें, फिर कार्बन प्रश्न पर जाएँ।",
     instructionAskCarbon: "Yes दबाएँ तो कार्बन पेज खुलेगा, No से नई हीट शुरू होगी।",
@@ -222,10 +234,10 @@ const translations = {
     welcomeText: "மொழியை தேர்வு செய்து தொடரவும்.",
     languageQuestion: "எந்த மொழியில் தொடர வேண்டும்?",
 
-    gradeTypeTitle: "N அல்லது D தேர்வு செய்யவும்",
+    gradeTypeTitle: "N (Normal) அல்லது D (Ductile) தேர்வு செய்யவும்",
     gradeTypeText: "முதலில் வகை தேர்வு செய்து, பின் கிரேடு தேர்வு செய்யவும்.",
-    nType: "N கிரேடு",
-    dType: "D கிரேடு",
+    nType: "N (Normal) கிரேடு",
+    dType: "D (Ductile) கிரேடு",
     gradeTitle: "TMT கிரேடு தேர்வு செய்யவும்",
     gradeText: "ஒரு விருப்பத்தைத் தேர்வு செய்து அடுத்த படிக்கு செல்லவும்.",
 
@@ -282,7 +294,7 @@ const translations = {
     dolocharNeed: "தேவையான டோலோச்சார்",
 
     instructionWelcome: "மொழியைத் தேர்வு செய்து தொடரவும் அழுத்தவும்.",
-    instructionGrade: "முதலில் N அல்லது D தேர்வு செய்து பிறகு கிரேடு தேர்வு செய்யவும்.",
+    instructionGrade: "முதலில் N (Normal) அல்லது D (Ductile) தேர்வு செய்து பிறகு கிரேடு தேர்வு செய்யவும்.",
     instructionInputs: "அளவு மற்றும் வீதங்களை நிரப்பவும். ஸ்க்ராப் + DRI = 100% ஆக இருக்க வேண்டும்.",
     instructionResult: "முடிவை சரிபார்த்து கார்பன் கேள்விக்கு செல்லவும்.",
     instructionAskCarbon: "ஆம் அழுத்தினால் கார்பன் பக்கம் திறக்கும். இல்லை என்றால் புதிய ஹீட்.",
@@ -399,6 +411,13 @@ export default function Wizard() {
     [gradeType],
   );
 
+  const selectedScrapTypeImage = useMemo(() => {
+    return (
+      scrapTypeOptions.find((option) => option.value === scrapType)?.image ??
+      scrapTypeOptions[0].image
+    );
+  }, [scrapType]);
+
   const setScrapShare = (value: number) => {
     const next = clamp(value, 0, 100);
     setScrapSharePct(next);
@@ -465,7 +484,7 @@ export default function Wizard() {
 
   const carbonCalc = useMemo(() => {
     const feoPct = Math.max(driFeTPct - driFeMPct, 0);
-    const feoKg = baseCalc.lmKg * (feoPct / 100);
+    const feoKg = baseCalc.driKg * (feoPct / 100);
 
     const cReductionKg = feoKg * (12 / 72) * (reductionFactorPct / 100);
 
@@ -480,6 +499,7 @@ export default function Wizard() {
 
     const cBalanceKg = cInitialKg + cFromDolocharKg - cReductionKg;
     const cBalancePct = baseCalc.lmKg > 0 ? (cBalanceKg / baseCalc.lmKg) * 100 : 0;
+    const currentCPct = Math.max(cBalancePct, 0);
 
     const pPct =
       baseCalc.lmKg > 0
@@ -518,11 +538,11 @@ export default function Wizard() {
 
     const driToAddKg =
       Math.abs(denominator) > 1e-9
-        ? Math.max((cBalanceKg - targetCarbonKg) / denominator, 0)
+        ? Math.max((targetCarbonKg - cBalanceKg) / denominator, 0)
         : 0;
 
     return {
-      cBalancePct,
+      currentCPct,
       pPct,
       sPct,
       driToAddKg,
@@ -975,12 +995,25 @@ export default function Wizard() {
                           onChange={(event) => setScrapType(event.target.value)}
                           className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base font-semibold text-slate-900"
                         >
-                          <option>HMS</option>
-                          <option>CR Punching</option>
-                          <option>Kaichi Cutting</option>
-                          <option>Import Boring</option>
+                          {scrapTypeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.value}
+                            </option>
+                          ))}
                         </select>
                       </label>
+                      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2">
+                        <div className="h-14 w-14 overflow-hidden rounded-full border border-slate-300 bg-slate-100">
+                          <Image
+                            src={selectedScrapTypeImage}
+                            alt={`${scrapType} reference`}
+                            width={56}
+                            height={56}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-800">{scrapType}</p>
+                      </div>
                       <NumberInput label={t.scrapC} value={scrapCPct} onChange={setScrapCPct} unit="%" step="0.001" min={0} />
                       <NumberInput label={t.scrapP} value={scrapPPct} onChange={setScrapPPct} unit="%" step="0.001" min={0} />
                       <NumberInput label={t.scrapS} value={scrapSPct} onChange={setScrapSPct} unit="%" step="0.001" min={0} />
@@ -1027,7 +1060,7 @@ export default function Wizard() {
                   <div className="space-y-3">
                     <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">{t.carbonResultTitle}</h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      <ResultTile title={t.currentC} value={`${formatNumber(carbonCalc.cBalancePct, 3)} %`} />
+                      <ResultTile title={t.currentC} value={`${formatNumber(carbonCalc.currentCPct, 3)} %`} />
                       <ResultTile title={t.currentP} value={`${formatNumber(carbonCalc.pPct, 3)} %`} />
                       <ResultTile title={t.currentS} value={`${formatNumber(carbonCalc.sPct, 3)} %`} />
                       <ResultTile title={t.driToAdd} value={`${formatNumber(carbonCalc.driToAddKg / 1000, 2)} Ton`} />
