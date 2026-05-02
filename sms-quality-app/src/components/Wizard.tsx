@@ -46,6 +46,9 @@ const scrapTypeOptions: ScrapTypeOption[] = [
 ];
 
 const stepOrder: Step[] = ["welcome", "grade", "inputs", "result", "askCarbon", "carbon"];
+const TARGET_C_BY_GRADE_TYPE: Record<GradeType, number> = { N: 0.22, D: 0.18 };
+const C_TO_FEO_MASS_RATIO = 12.011 / 71.844;
+const MIN_DIVISOR = 1e-6;
 
 const translations = {
   en: {
@@ -117,13 +120,15 @@ const translations = {
     dolocharFC: "Dolochar FC",
     dolocharEff: "Dolochar Efficiency",
     dolocharP: "Dolochar P",
+    dolocharS: "Dolochar S",
 
     carbonResultTitle: "Carbon Result",
     currentC: "Current C",
     currentP: "Current P",
     currentS: "Current S",
     driToAdd: "You Have To Add DRI",
-    dolocharNeed: "Required Dolochar",
+    dolocharNeed: "Additional Dolochar",
+    totalDolocharNeed: "Total Dolochar Required",
 
     instructionWelcome: "Select one language, then press Continue.",
     instructionGrade: "Select N (Normal) or D (Ductile) first, then choose one exact grade.",
@@ -201,13 +206,15 @@ const translations = {
     dolocharFC: "डोलोचार FC",
     dolocharEff: "डोलोचार दक्षता",
     dolocharP: "डोलोचार P",
+    dolocharS: "डोलोचार S",
 
     carbonResultTitle: "कार्बन परिणाम",
     currentC: "वर्तमान C",
     currentP: "वर्तमान P",
     currentS: "वर्तमान S",
     driToAdd: "जितना DRI डालना है",
-    dolocharNeed: "आवश्यक डोलोचार",
+    dolocharNeed: "अतिरिक्त डोलोचार",
+    totalDolocharNeed: "कुल आवश्यक डोलोचार",
 
     instructionWelcome: "एक भाषा चुनें और Continue दबाएँ।",
     instructionGrade: "पहले N (Normal) या D (Ductile) चुनें, फिर एक ग्रेड चुनें।",
@@ -285,13 +292,15 @@ const translations = {
     dolocharFC: "டோலோச்சார் FC",
     dolocharEff: "டோலோச்சார் திறன்",
     dolocharP: "டோலோச்சார் P",
+    dolocharS: "டோலோச்சார் S",
 
     carbonResultTitle: "கார்பன் முடிவு",
     currentC: "தற்போதைய C",
     currentP: "தற்போதைய P",
     currentS: "தற்போதைய S",
     driToAdd: "சேர்க்க வேண்டிய DRI",
-    dolocharNeed: "தேவையான டோலோச்சார்",
+    dolocharNeed: "கூடுதல் டோலோச்சார்",
+    totalDolocharNeed: "மொத்த தேவையான டோலோச்சார்",
 
     instructionWelcome: "மொழியைத் தேர்வு செய்து தொடரவும் அழுத்தவும்.",
     instructionGrade: "முதலில் N (Normal) அல்லது D (Ductile) தேர்வு செய்து பிறகு கிரேடு தேர்வு செய்யவும்.",
@@ -304,6 +313,9 @@ const translations = {
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
+
+const clampPercent = (value: number) => clamp(value, 0, 100);
+const toFraction = (value: number) => clampPercent(value) / 100;
 
 const formatNumber = (value: number, digits = 2) => {
   if (!Number.isFinite(value)) {
@@ -320,6 +332,7 @@ type NumberInputProps = {
   unit?: string;
   step?: string;
   min?: number;
+  max?: number;
 };
 
 function NumberInput({
@@ -329,6 +342,7 @@ function NumberInput({
   unit,
   step = "0.01",
   min,
+  max,
 }: NumberInputProps) {
   return (
     <label className="block space-y-1.5">
@@ -340,9 +354,11 @@ function NumberInput({
           value={value}
           step={step}
           min={min}
+          max={max}
           onChange={(event) => {
             const parsed = Number(event.target.value);
-            onChange(Number.isFinite(parsed) ? parsed : 0);
+            const next = Number.isFinite(parsed) ? parsed : 0;
+            onChange(clamp(next, min ?? Number.NEGATIVE_INFINITY, max ?? Number.POSITIVE_INFINITY));
           }}
           className="h-11 w-full bg-transparent text-lg font-semibold text-slate-900 outline-none"
         />
@@ -379,7 +395,7 @@ export default function Wizard() {
   const [scrapSharePct, setScrapSharePct] = useState(20);
   const [driSharePct, setDriSharePct] = useState(80);
   const [scrapYieldPct, setScrapYieldPct] = useState(94);
-  const [driYieldPct, setDriYieldPct] = useState(96);
+  const [driYieldPct, setDriYieldPct] = useState(85);
 
   const [scrapType, setScrapType] = useState("HMS");
   const [scrapCPct, setScrapCPct] = useState(0.3);
@@ -400,6 +416,7 @@ export default function Wizard() {
   const [dolocharFCPct, setDolocharFCPct] = useState(42);
   const [dolocharEffPct, setDolocharEffPct] = useState(70);
   const [dolocharPPct, setDolocharPPct] = useState(0.0035);
+  const [dolocharSPct, setDolocharSPct] = useState(0.0058);
 
   const [carbonCalculated, setCarbonCalculated] = useState(false);
 
@@ -440,7 +457,7 @@ export default function Wizard() {
     setScrapSharePct(20);
     setDriSharePct(80);
     setScrapYieldPct(94);
-    setDriYieldPct(96);
+    setDriYieldPct(85);
 
     setScrapType("HMS");
     setScrapCPct(0.3);
@@ -461,92 +478,99 @@ export default function Wizard() {
     setDolocharFCPct(42);
     setDolocharEffPct(70);
     setDolocharPPct(0.0035);
+    setDolocharSPct(0.0058);
 
     setCarbonCalculated(false);
   };
 
   const baseCalc = useMemo(() => {
-    const totalKg = Math.max(quantityTon, 0) * 1000;
-    const scrapKg = totalKg * (scrapSharePct / 100);
-    const driKg = totalKg * (driSharePct / 100);
+    const targetLmKg = Math.max(quantityTon, 0) * 1000;
+    const scrapShare = toFraction(scrapSharePct);
+    const driShare = toFraction(driSharePct);
+    const scrapYield = toFraction(scrapYieldPct);
+    const driYield = toFraction(driYieldPct);
+    const weightedYield = scrapShare * scrapYield + driShare * driYield;
 
-    const lmKg =
-      scrapKg * (scrapYieldPct / 100) +
-      driKg * (driYieldPct / 100);
+    const totalKg = weightedYield > MIN_DIVISOR ? targetLmKg / weightedYield : 0;
+    const scrapKg = totalKg * scrapShare;
+    const driKg = totalKg * driShare;
+    const lmKg = scrapKg * scrapYield + driKg * driYield;
 
     return {
+      targetLmKg,
       totalKg,
       scrapKg,
       driKg,
       lmKg,
+      weightedYieldPct: weightedYield * 100,
     };
   }, [quantityTon, scrapSharePct, driSharePct, scrapYieldPct, driYieldPct]);
 
   const carbonCalc = useMemo(() => {
+    const reductionFraction = toFraction(reductionFactorPct);
+    const secondBathReductionFraction = toFraction(secondBathReductionPct);
     const feoPct = Math.max(driFeTPct - driFeMPct, 0);
-    const feoKg = baseCalc.driKg * (feoPct / 100);
+    const feoKg = baseCalc.driKg * toFraction(feoPct);
+    const cForFeoReductionKg = feoKg * C_TO_FEO_MASS_RATIO * reductionFraction;
 
-    const cReductionKg = feoKg * (12 / 72) * (reductionFactorPct / 100);
+    const cFromScrapsKg = baseCalc.scrapKg * toFraction(scrapCPct);
+    const cFromDrisKg = baseCalc.driKg * toFraction(driCPct);
+    const effectiveCarbonPerKgDolochar = toFraction(dolocharFCPct) * toFraction(dolocharEffPct);
+    const cFromDolocharKg = Math.max(dolocharAddedKg, 0) * effectiveCarbonPerKgDolochar;
+    const cBalanceKg = cFromScrapsKg + cFromDrisKg + cFromDolocharKg - cForFeoReductionKg;
 
-    const cInitialKg =
-      baseCalc.scrapKg * (scrapCPct / 100) +
-      baseCalc.driKg * (driCPct / 100);
+    const chemistryMassKg = Math.max(baseCalc.lmKg + cFromDolocharKg - cForFeoReductionKg, 0);
+    const rawCPct = chemistryMassKg > MIN_DIVISOR ? (cBalanceKg / chemistryMassKg) * 100 : 0;
+    const currentCPct = Math.max(rawCPct, 0);
 
-    const effectiveCarbonPerKgDolochar =
-      (dolocharFCPct / 100) * (dolocharEffPct / 100);
+    const totalPKg =
+      baseCalc.scrapKg * toFraction(scrapPPct) +
+      baseCalc.driKg * toFraction(driPPct) +
+      Math.max(dolocharAddedKg, 0) * toFraction(dolocharPPct);
 
-    const cFromDolocharKg = dolocharAddedKg * effectiveCarbonPerKgDolochar;
+    const pPct = chemistryMassKg > MIN_DIVISOR ? (totalPKg / chemistryMassKg) * 100 : 0;
 
-    const cBalanceKg = cInitialKg + cFromDolocharKg - cReductionKg;
-    const cBalancePct = baseCalc.lmKg > 0 ? (cBalanceKg / baseCalc.lmKg) * 100 : 0;
-    const currentCPct = Math.max(cBalancePct, 0);
+    const totalSKg =
+      baseCalc.scrapKg * toFraction(scrapSPct) +
+      baseCalc.driKg * toFraction(driSPct) +
+      Math.max(dolocharAddedKg, 0) * toFraction(dolocharSPct);
 
-    const pPct =
-      baseCalc.lmKg > 0
-        ? ((baseCalc.scrapKg * (scrapPPct / 100) +
-            baseCalc.driKg * (driPPct / 100) +
-            dolocharAddedKg * (dolocharPPct / 100)) /
-            baseCalc.lmKg) *
-          100
-        : 0;
+    const sPct = chemistryMassKg > MIN_DIVISOR ? (totalSKg / chemistryMassKg) * 100 : 0;
 
-    const sPct =
-      baseCalc.lmKg > 0
-        ? ((baseCalc.scrapKg * (scrapSPct / 100) +
-            baseCalc.driKg * (driSPct / 100)) /
-            baseCalc.lmKg) *
-          100
-        : 0;
-
-    const targetCarbonKg = baseCalc.lmKg * (targetCarbonPct / 100);
-    const baselineWithoutDolocharKg = cInitialKg - cReductionKg;
-
+    const targetCarbonFraction = toFraction(targetCarbonPct);
+    const targetCarbonKg = chemistryMassKg * targetCarbonFraction;
+    const cDeficitKg = Math.max(targetCarbonKg - cBalanceKg, 0);
+    const dolocharDenominator = effectiveCarbonPerKgDolochar * (1 - targetCarbonFraction);
     const requiredDolocharKg =
-      effectiveCarbonPerKgDolochar > 0
-        ? Math.max(
-            (targetCarbonKg - baselineWithoutDolocharKg) / effectiveCarbonPerKgDolochar,
-            0,
-          )
+      cDeficitKg > 0 && dolocharDenominator > MIN_DIVISOR
+        ? cDeficitKg / dolocharDenominator
         : 0;
+    const totalDolocharRequiredKg = Math.max(dolocharAddedKg, 0) + requiredDolocharKg;
 
-    const netCarbonPerExtraDriKg =
-      driCPct / 100 -
-      (feoPct / 100) * (12 / 72) * (secondBathReductionPct / 100);
-
-    const denominator =
-      (targetCarbonPct / 100) * (driYieldPct / 100) - netCarbonPerExtraDriKg;
-
+    const cConsumedPerExtraDriKg =
+      toFraction(feoPct) * C_TO_FEO_MASS_RATIO * secondBathReductionFraction;
+    const netCarbonPerExtraDriKg = toFraction(driCPct) - cConsumedPerExtraDriKg;
+    const liquidPerExtraDriKg = toFraction(driYieldPct);
+    const driDenominator = netCarbonPerExtraDriKg - targetCarbonFraction * liquidPerExtraDriKg;
     const driToAddKg =
-      Math.abs(denominator) > 1e-9
-        ? Math.max((targetCarbonKg - cBalanceKg) / denominator, 0)
+      cDeficitKg > 0 && driDenominator > MIN_DIVISOR
+        ? cDeficitKg / driDenominator
         : 0;
 
     return {
       currentCPct,
-      pPct,
-      sPct,
+      rawCPct,
+      pPct: Math.max(pPct, 0),
+      sPct: Math.max(sPct, 0),
+      cBalanceKg,
+      chemistryMassKg,
+      feoKg,
+      cForFeoReductionKg,
+      cDeficitKg,
+      driAdditionPossible: cDeficitKg <= 0 || driDenominator > MIN_DIVISOR,
       driToAddKg,
       requiredDolocharKg,
+      totalDolocharRequiredKg,
     };
   }, [
     baseCalc.lmKg,
@@ -565,9 +589,47 @@ export default function Wizard() {
     dolocharPPct,
     scrapSPct,
     driSPct,
+    dolocharSPct,
     targetCarbonPct,
     secondBathReductionPct,
     driYieldPct,
+  ]);
+
+  const calculationWarnings = useMemo(() => {
+    const warnings: string[] = [];
+
+    if (baseCalc.weightedYieldPct <= MIN_DIVISOR && quantityTon > 0) {
+      warnings.push("Yield is zero, so charge weight cannot be calculated.");
+    }
+
+    if (Math.abs(scrapSharePct + driSharePct - 100) > 0.01) {
+      warnings.push("Scrap share and DRI share must total 100%.");
+    }
+
+    if (driFeMPct > driFeTPct) {
+      warnings.push("DRI Fe(m) is higher than Fe(T); FeO is being treated as zero.");
+    }
+
+    if (baseCalc.lmKg > 0 && carbonCalc.chemistryMassKg <= MIN_DIVISOR) {
+      warnings.push("Chemistry mass is zero or negative after carbon reduction.");
+    }
+
+    if (carbonCalc.cDeficitKg > 0 && !carbonCalc.driAdditionPossible) {
+      warnings.push("DRI addition will dilute carbon at these values; use Dolochar for carbon correction.");
+    }
+
+    return warnings;
+  }, [
+    baseCalc.weightedYieldPct,
+    baseCalc.lmKg,
+    quantityTon,
+    scrapSharePct,
+    driSharePct,
+    driFeMPct,
+    driFeTPct,
+    carbonCalc.chemistryMassKg,
+    carbonCalc.cDeficitKg,
+    carbonCalc.driAdditionPossible,
   ]);
 
   const instructions: Record<Step, string> = {
@@ -584,7 +646,7 @@ export default function Wizard() {
       <header className="sticky top-0 z-20 border-b border-slate-300 bg-slate-900/95 px-4 py-3 text-white backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-orange-300">{t.companyLine}</p>
+            <p className="text-[24px] font-bold uppercase tracking-[0.1em] text-orange-300">{t.companyLine}</p>
             <h1 className="text-lg font-bold tracking-[0.05em]">{t.processTitle}</h1>
           </div>
           <div className="text-right">
@@ -608,6 +670,19 @@ export default function Wizard() {
             <p className="mt-1 text-sm font-medium text-slate-800">{instructions[step]}</p>
           </div>
 
+          {(step === "result" || step === "carbon") && calculationWarnings.length > 0 ? (
+            <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-red-700">Calculation Warning</p>
+              <div className="mt-1 space-y-1">
+                {calculationWarnings.map((warning) => (
+                  <p key={warning} className="text-sm font-semibold text-red-800">
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <AnimatePresence mode="wait">
             {step === "welcome" ? (
               <motion.div
@@ -620,14 +695,14 @@ export default function Wizard() {
                 <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4 sm:p-6">
                   <div className="grid items-center gap-4 sm:grid-cols-[140px_1fr]">
                     <div className="flex justify-center rounded-xl border border-slate-200 bg-white p-3">
-                      <Image
-                        src="https://suryadev.in/wp-content/uploads/2026/01/logo-1.png"
-                        alt="Suryadev logo"
-                        width={320}
-                        height={120}
-                        className="h-12 w-auto sm:h-16"
-                        priority
-                      />
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="text-3xl font-extrabold text-orange-500 tracking-tight">
+                          SURYADEV
+                        </div>
+                        <div className="text-xs font-semibold text-slate-600 tracking-wider mt-1">
+                          TMT STEEL
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -703,6 +778,7 @@ export default function Wizard() {
                     onClick={() => {
                       setGradeType("N");
                       setGrade("500N");
+                      setTargetCarbonPct(TARGET_C_BY_GRADE_TYPE.N);
                     }}
                     className={`rounded-xl border px-4 py-4 text-base font-bold ${
                       gradeType === "N"
@@ -717,6 +793,7 @@ export default function Wizard() {
                     onClick={() => {
                       setGradeType("D");
                       setGrade("550D");
+                      setTargetCarbonPct(TARGET_C_BY_GRADE_TYPE.D);
                     }}
                     className={`rounded-xl border px-4 py-4 text-base font-bold ${
                       gradeType === "D"
@@ -801,6 +878,7 @@ export default function Wizard() {
                     unit="%"
                     step="0.1"
                     min={0}
+                    max={100}
                   />
                   <NumberInput
                     label={t.driShare}
@@ -809,6 +887,7 @@ export default function Wizard() {
                     unit="%"
                     step="0.1"
                     min={0}
+                    max={100}
                   />
                   <NumberInput
                     label={t.scrapYield}
@@ -817,6 +896,7 @@ export default function Wizard() {
                     unit="%"
                     step="0.1"
                     min={0}
+                    max={100}
                   />
                   <NumberInput
                     label={t.driYield}
@@ -825,6 +905,7 @@ export default function Wizard() {
                     unit="%"
                     step="0.1"
                     min={0}
+                    max={100}
                   />
                 </div>
 
@@ -895,6 +976,168 @@ export default function Wizard() {
                     title={t.lmWeight}
                     value={`${formatNumber(baseCalc.lmKg, 0)} kg`}
                   />
+                </div>
+
+                {/* Predicted Chemistry Section */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700 mb-3">Predicted Chemistry</h3>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {/* Carbon */}
+                    <div className={`rounded-xl border-2 p-3 ${
+                      carbonCalc.rawCPct < 0
+                        ? 'border-red-500 bg-red-50'
+                        : carbonCalc.currentCPct <= targetCarbonPct 
+                        ? 'border-green-500 bg-green-50' 
+                        : carbonCalc.currentCPct <= targetCarbonPct * 1.1
+                        ? 'border-yellow-500 bg-yellow-50'
+                        : 'border-red-500 bg-red-50'
+                    }`}>
+                      <p className="text-xs font-bold text-slate-600">%C</p>
+                      <p className="text-xl font-bold text-slate-900">{formatNumber(carbonCalc.currentCPct, 3)}%</p>
+                      <p className="text-xs text-slate-600">Target: {formatNumber(targetCarbonPct, 2)}%</p>
+                      {carbonCalc.rawCPct < 0 && (
+                        <p className="text-xs font-bold text-red-600 mt-1">Carbon deficit</p>
+                      )}
+                    </div>
+
+                    {/* Phosphorus */}
+                    <div className={`rounded-xl border-2 p-3 ${
+                      carbonCalc.pPct <= 0.060 
+                        ? 'border-green-500 bg-green-50' 
+                        : carbonCalc.pPct <= 0.066
+                        ? 'border-yellow-500 bg-yellow-50'
+                        : 'border-red-500 bg-red-50'
+                    }`}>
+                      <p className="text-xs font-bold text-slate-600">%P</p>
+                      <p className="text-xl font-bold text-slate-900">{formatNumber(carbonCalc.pPct, 3)}%</p>
+                      <p className="text-xs text-slate-600">Target: 0.060%</p>
+                    </div>
+
+                    {/* Sulfur */}
+                    <div className={`rounded-xl border-2 p-3 ${
+                      carbonCalc.sPct <= 0.055 
+                        ? 'border-green-500 bg-green-50' 
+                        : carbonCalc.sPct <= 0.061
+                        ? 'border-yellow-500 bg-yellow-50'
+                        : 'border-red-500 bg-red-50'
+                    }`}>
+                      <p className="text-xs font-bold text-slate-600">%S</p>
+                      <p className="text-xl font-bold text-slate-900">{formatNumber(carbonCalc.sPct, 3)}%</p>
+                      <p className="text-xs text-slate-600">Max: 0.055%</p>
+                    </div>
+
+                    {/* Net Carbon Balance */}
+                    <div className="rounded-xl border-2 border-slate-300 bg-white p-3">
+                      <p className="text-xs font-bold text-slate-600">C Balance</p>
+                      <p className="text-xl font-bold text-slate-900">{formatNumber(carbonCalc.cBalanceKg, 1)} kg</p>
+                      <p className="text-xs text-slate-600">In liquid metal</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recommendations Section */}
+                <div className="space-y-3">
+                  {/* Carbon Low or Negative - Add Dolochar */}
+                  {carbonCalc.currentCPct < targetCarbonPct && (
+                    <div className="rounded-xl border-2 border-orange-500 bg-orange-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-orange-500 p-2">
+                          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-orange-900">
+                            {carbonCalc.rawCPct < 0 ? 'Carbon Deficit - Critical' : 'Carbon Below Target'}
+                          </p>
+                          <p className="mt-1 text-sm text-orange-800">
+                            {carbonCalc.rawCPct < 0 ? (
+                              <>FeO reduction is consuming more carbon than available. </>
+                            ) : null}
+                            Total Dolochar required is <span className="font-bold">{Math.ceil(carbonCalc.totalDolocharRequiredKg)} kg</span>.
+                            Add <span className="font-bold">{Math.ceil(carbonCalc.requiredDolocharKg)} kg</span> more to reach target carbon.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Carbon High - No Addition */}
+                  {carbonCalc.currentCPct > targetCarbonPct + 0.02 && (
+                    <div className="rounded-xl border-2 border-red-500 bg-red-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-red-500 p-2">
+                          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-red-900">Carbon Above Target</p>
+                          <p className="mt-1 text-sm text-red-800">
+                            Do not add any Dolochar. Carbon will reduce during oxygen blowing. Monitor at Bath Sample 1.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phosphorus High */}
+                  {carbonCalc.pPct > 0.066 && (
+                    <div className="rounded-xl border-2 border-red-500 bg-red-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-red-500 p-2">
+                          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-red-900">Phosphorus Too High</p>
+                          <p className="mt-1 text-sm text-red-800">
+                            Reduce high-phosphorus scrap in charge mix. Consider using more CR Punching or Kaichi Cutting instead of HMS.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sulfur High */}
+                  {carbonCalc.sPct > 0.055 && (
+                    <div className="rounded-xl border-2 border-red-500 bg-red-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-red-500 p-2">
+                          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-red-900">Sulfur Exceeds Limit</p>
+                          <p className="mt-1 text-sm text-red-800">
+                            Check scrap and DRI mix. Reduce high-sulfur materials. Alert supervisor if sulfur remains high.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All OK */}
+                  {carbonCalc.currentCPct >= 0 &&
+                   Math.abs(carbonCalc.currentCPct - targetCarbonPct) <= 0.02 && 
+                   carbonCalc.pPct <= 0.066 && 
+                   carbonCalc.sPct <= 0.055 && (
+                    <div className="rounded-xl border-2 border-green-500 bg-green-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-full bg-green-500 p-2">
+                          <CheckCircle2 className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-green-900">Chemistry On Target</p>
+                          <p className="mt-1 text-sm text-green-800">
+                            All predicted values are within acceptable range. Proceed to melting and verify at Bath Sample 1.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">
@@ -1014,33 +1257,34 @@ export default function Wizard() {
                         </div>
                         <p className="text-sm font-semibold text-slate-800">{scrapType}</p>
                       </div>
-                      <NumberInput label={t.scrapC} value={scrapCPct} onChange={setScrapCPct} unit="%" step="0.001" min={0} />
-                      <NumberInput label={t.scrapP} value={scrapPPct} onChange={setScrapPPct} unit="%" step="0.001" min={0} />
-                      <NumberInput label={t.scrapS} value={scrapSPct} onChange={setScrapSPct} unit="%" step="0.001" min={0} />
+                      <NumberInput label={t.scrapC} value={scrapCPct} onChange={setScrapCPct} unit="%" step="0.001" min={0} max={100} />
+                      <NumberInput label={t.scrapP} value={scrapPPct} onChange={setScrapPPct} unit="%" step="0.001" min={0} max={100} />
+                      <NumberInput label={t.scrapS} value={scrapSPct} onChange={setScrapSPct} unit="%" step="0.001" min={0} max={100} />
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                     <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">{t.driSection}</h3>
                     <div className="mt-3 space-y-3">
-                      <NumberInput label={t.driC} value={driCPct} onChange={setDriCPct} unit="%" step="0.001" min={0} />
-                      <NumberInput label={t.driP} value={driPPct} onChange={setDriPPct} unit="%" step="0.001" min={0} />
-                      <NumberInput label={t.driS} value={driSPct} onChange={setDriSPct} unit="%" step="0.001" min={0} />
-                      <NumberInput label={t.driFeM} value={driFeMPct} onChange={setDriFeMPct} unit="%" step="0.1" min={0} />
-                      <NumberInput label={t.driFeT} value={driFeTPct} onChange={setDriFeTPct} unit="%" step="0.1" min={0} />
+                      <NumberInput label={t.driC} value={driCPct} onChange={setDriCPct} unit="%" step="0.001" min={0} max={100} />
+                      <NumberInput label={t.driP} value={driPPct} onChange={setDriPPct} unit="%" step="0.001" min={0} max={100} />
+                      <NumberInput label={t.driS} value={driSPct} onChange={setDriSPct} unit="%" step="0.001" min={0} max={100} />
+                      <NumberInput label={t.driFeM} value={driFeMPct} onChange={setDriFeMPct} unit="%" step="0.1" min={0} max={100} />
+                      <NumberInput label={t.driFeT} value={driFeTPct} onChange={setDriFeTPct} unit="%" step="0.1" min={0} max={100} />
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                     <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">{t.factorSection}</h3>
                     <div className="mt-3 space-y-3">
-                      <NumberInput label={t.targetC} value={targetCarbonPct} onChange={setTargetCarbonPct} unit="%" step="0.001" min={0} />
-                      <NumberInput label={t.reductionC} value={reductionFactorPct} onChange={setReductionFactorPct} unit="%" step="0.1" min={0} />
-                      <NumberInput label={t.secondBathReduction} value={secondBathReductionPct} onChange={setSecondBathReductionPct} unit="%" step="0.1" min={0} />
+                      <NumberInput label={t.targetC} value={targetCarbonPct} onChange={setTargetCarbonPct} unit="%" step="0.001" min={0} max={100} />
+                      <NumberInput label={t.reductionC} value={reductionFactorPct} onChange={setReductionFactorPct} unit="%" step="0.1" min={0} max={100} />
+                      <NumberInput label={t.secondBathReduction} value={secondBathReductionPct} onChange={setSecondBathReductionPct} unit="%" step="0.1" min={0} max={100} />
                       <NumberInput label={t.dolocharAdded} value={dolocharAddedKg} onChange={setDolocharAddedKg} unit="kg" step="1" min={0} />
-                      <NumberInput label={t.dolocharFC} value={dolocharFCPct} onChange={setDolocharFCPct} unit="%" step="0.1" min={0} />
-                      <NumberInput label={t.dolocharEff} value={dolocharEffPct} onChange={setDolocharEffPct} unit="%" step="0.1" min={0} />
-                      <NumberInput label={t.dolocharP} value={dolocharPPct} onChange={setDolocharPPct} unit="%" step="0.0001" min={0} />
+                      <NumberInput label={t.dolocharFC} value={dolocharFCPct} onChange={setDolocharFCPct} unit="%" step="0.1" min={0} max={100} />
+                      <NumberInput label={t.dolocharEff} value={dolocharEffPct} onChange={setDolocharEffPct} unit="%" step="0.1" min={0} max={100} />
+                      <NumberInput label={t.dolocharP} value={dolocharPPct} onChange={setDolocharPPct} unit="%" step="0.0001" min={0} max={100} />
+                      <NumberInput label={t.dolocharS} value={dolocharSPct} onChange={setDolocharSPct} unit="%" step="0.0001" min={0} max={100} />
                     </div>
                   </div>
                 </div>
@@ -1065,6 +1309,7 @@ export default function Wizard() {
                       <ResultTile title={t.currentS} value={`${formatNumber(carbonCalc.sPct, 3)} %`} />
                       <ResultTile title={t.driToAdd} value={`${formatNumber(carbonCalc.driToAddKg / 1000, 2)} Ton`} />
                       <ResultTile title={t.dolocharNeed} value={`${formatNumber(carbonCalc.requiredDolocharKg, 0)} kg`} />
+                      <ResultTile title={t.totalDolocharNeed} value={`${formatNumber(carbonCalc.totalDolocharRequiredKg, 0)} kg`} />
                     </div>
                   </div>
                 ) : null}
