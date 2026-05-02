@@ -126,7 +126,8 @@ const translations = {
     currentC: "Current C",
     currentP: "Current P",
     currentS: "Current S",
-    driToAdd: "You Have To Add DRI",
+    driToAdd: "Additional DRI Required",
+    noDriRequired: "No additional DRI required",
     dolocharNeed: "Additional Dolochar",
     totalDolocharNeed: "Total Dolochar Required",
 
@@ -212,7 +213,8 @@ const translations = {
     currentC: "वर्तमान C",
     currentP: "वर्तमान P",
     currentS: "वर्तमान S",
-    driToAdd: "जितना DRI डालना है",
+    driToAdd: "अतिरिक्त DRI आवश्यकता",
+    noDriRequired: "अतिरिक्त DRI आवश्यक नहीं",
     dolocharNeed: "अतिरिक्त डोलोचार",
     totalDolocharNeed: "कुल आवश्यक डोलोचार",
 
@@ -298,7 +300,8 @@ const translations = {
     currentC: "தற்போதைய C",
     currentP: "தற்போதைய P",
     currentS: "தற்போதைய S",
-    driToAdd: "சேர்க்க வேண்டிய DRI",
+    driToAdd: "கூடுதல் DRI தேவை",
+    noDriRequired: "கூடுதல் DRI தேவையில்லை",
     dolocharNeed: "கூடுதல் டோலோச்சார்",
     totalDolocharNeed: "மொத்த தேவையான டோலோச்சார்",
 
@@ -1307,7 +1310,14 @@ export default function Wizard() {
                       <ResultTile title={t.currentC} value={`${formatNumber(carbonCalc.currentCPct, 3)} %`} />
                       <ResultTile title={t.currentP} value={`${formatNumber(carbonCalc.pPct, 3)} %`} />
                       <ResultTile title={t.currentS} value={`${formatNumber(carbonCalc.sPct, 3)} %`} />
-                      <ResultTile title={t.driToAdd} value={`${formatNumber(carbonCalc.driToAddKg / 1000, 2)} Ton`} />
+                      <ResultTile
+                        title={t.driToAdd}
+                        value={
+                          carbonCalc.driToAddKg > 0
+                            ? `${formatNumber(carbonCalc.driToAddKg / 1000, 2)} Ton`
+                            : t.noDriRequired
+                        }
+                      />
                       <ResultTile title={t.dolocharNeed} value={`${formatNumber(carbonCalc.requiredDolocharKg, 0)} kg`} />
                       <ResultTile title={t.totalDolocharNeed} value={`${formatNumber(carbonCalc.totalDolocharRequiredKg, 0)} kg`} />
                     </div>
